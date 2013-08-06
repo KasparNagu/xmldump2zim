@@ -208,7 +208,7 @@ int main(int argc, char* argv[]){
     zim::writer::ZimCreator creator(argc, argv);
     std::string fname = std::string(zimFile);
     creator.create(fname, *source);
-    free(source);
+    delete source;
 }
 
 
@@ -381,8 +381,9 @@ zim::Blob XmlDumpSource::getData(const std::string& aid){
 		return zim::Blob(NULL,0);
 	}else{
 		std::cout << "serving " << aid << std::endl;
-		return wikiParser->generateHtml(*text,aid);
-		free(text);
+		zim::Blob b = wikiParser->generateHtml(*text,aid);
+		delete text;
+		return b;
 	}
 }
 

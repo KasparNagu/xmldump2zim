@@ -10,6 +10,7 @@ char * MWPhpParser::php_argv[2] = {(char*)"MWPhpParser", NULL};
 
 
 void MWPhpParser::init(){
+	php_embed_module.php_ini_path_override = (char*)"php.ini";
 	if (php_embed_init(1, php_argv PTSRMLS_CC) == FAILURE) {
 		fprintf(stderr,"php init failed\n");
 		exit(1);
@@ -41,7 +42,9 @@ ZEND_FUNCTION(getArticleText){
 	if(str==NULL){
 		RETURN_FALSE;
 	}else{
-		RETURN_STRINGL(str->data(), str->size(), 1);
+		RETVAL_STRINGL(str->data(), str->size(), 1);
+		delete str;
+		return;
 	}	
 }
 void MWPhpParser::registerFunctions(){

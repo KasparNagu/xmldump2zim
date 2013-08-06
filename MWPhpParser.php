@@ -1,5 +1,5 @@
 <?php
-
+phpinfo();
 //some infrastuctore for the parse to run standalone
 define( 'MEDIAWIKI', TRUE);
 $wgCommandLineMode = true;
@@ -388,9 +388,11 @@ function generateHtml($text,$title){
                         preg_replace_callback('/src="([^"]*)"/',function($matches){
 				//we embed the images
 				if(file_exists($matches[1])){
-					$imgbinary = fread(fopen($matches[1], "r"), filesize($matches[1]));
-					return 'src="data:image/'.substr($matches[1],-3).';base64,'.
-						base64_encode($imgbinary).'"';					
+					$file=fopen($matches[1], "r");
+					$imgbinary = fread($file, filesize($matches[1]));
+					$base64 = base64_encode($imgbinary);
+					return 'src="data:image/'.substr($matches[1],-3).';base64,'.$base64.'"';
+					fclose($file);
 				}else{
 					return $matches[0];
 				}
