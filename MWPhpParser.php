@@ -1,8 +1,6 @@
 <?php
 
 //some infrastuctore for the parse to run standalone
-require_once("debug_backtrace.php");
-
 define( 'MEDIAWIKI', TRUE);
 $wgCommandLineMode = true;
 
