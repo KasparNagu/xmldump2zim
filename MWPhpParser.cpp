@@ -10,6 +10,7 @@ char * MWPhpParser::php_argv[2] = {(char*)"MWPhpParser", NULL};
 
 
 void MWPhpParser::init(){
+	useCounter = 0;
 	php_embed_module.php_ini_path_override = (char*)"php.ini";
 	if (php_embed_init(1, php_argv PTSRMLS_CC) == FAILURE) {
 		fprintf(stderr,"php init failed\n");
@@ -87,6 +88,13 @@ void MWPhpParser::evalString(char *string){
 }
 
 zim::Blob MWPhpParser::generateHtml(const std::string &text,const std::string &title){
+	if(useCounter>100){
+		shutdown();
+		init();
+		useCounter = 0;
+	}else{
+		useCounter++;
+	}
 	zval *args[2];
 	zval ret,funcname,zstr,ztitle;
 	ZVAL_STRING(&funcname,"generateHtml",0);

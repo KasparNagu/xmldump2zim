@@ -1,5 +1,4 @@
 <?php
-phpinfo();
 //some infrastuctore for the parse to run standalone
 define( 'MEDIAWIKI', TRUE);
 $wgCommandLineMode = true;
@@ -370,6 +369,21 @@ class FakeResultWrapper2 extends FakeResultWrapper {
 
 $ourParser = new Parser();
 
+function replaceImagesWithBase64Data($matches){
+				//we embed the images
+				if(file_exists($matches[1])){
+					$file=fopen($matches[1], "r");
+					$imgbinary = fread($file, filesize($matches[1]));
+					$base64 = base64_encode($imgbinary);
+					unset($imgbinary);
+					fclose($file);
+					return 'src="data:image/'.substr($matches[1],-3).';base64,'.$base64.'"';
+					
+				}else{
+					return $matches[0];
+				}
+			}
+
 function generateHtml($text,$title){
 	global $ourParser;
 	$ret = $ourParser->parse($text,Title::newFromText( $title ),new ParserOptions());
@@ -385,18 +399,7 @@ function generateHtml($text,$title){
                 	'<link rel="stylesheet" href="/-/all.css" type="text/css" media="screen" />'.
                         "</head>\n" .
                         "<body>\n" .
-                        preg_replace_callback('/src="([^"]*)"/',function($matches){
-				//we embed the images
-				if(file_exists($matches[1])){
-					$file=fopen($matches[1], "r");
-					$imgbinary = fread($file, filesize($matches[1]));
-					$base64 = base64_encode($imgbinary);
-					return 'src="data:image/'.substr($matches[1],-3).';base64,'.$base64.'"';
-					fclose($file);
-				}else{
-					return $matches[0];
-				}
-			},$ret->getText()) .
+                        preg_replace_callback('/src="([^"]*)"/','replaceImagesWithBase64Data',$ret->getText()) .
                         "</body>\n" .
                         "</html>";
 #	echo $ret;

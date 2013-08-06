@@ -133,7 +133,7 @@ class XmlDumpSource : public zim::writer::ArticleSource, public ArticleSupplier 
 	    void loadIndex(const char *filename);
 	    
 	   XmlDumpSource(char *xmlFile){
-		nMaxArtices = 10;
+		nMaxArtices = 0; //means do all
 		counter = 0;
 		fileEnded = false;
 		wikiParser = new MWPhpParser();

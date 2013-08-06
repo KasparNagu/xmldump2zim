@@ -31,6 +31,7 @@ class MWPhpParser : public WikiParser{
 		static char *php_argv[2];
 		void registerFunctions();
 		void evalString(char *string);
+		int useCounter;
 };
 
 
