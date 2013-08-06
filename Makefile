@@ -27,9 +27,3 @@ all.css:
 
 clean:
 	rm -f $(FILES)
-
-backup:
-	for m in /media/*/Backup; do\
-		tar cvzf "$$m"/xmldump2zim_$(shell date +%Y%m%d_%H%M%S).tar.gz *.cpp *.php Makefile;\
-	done
-	tar cvzf /home/kb/Dropbox/xmldump2zim_$(shell date +%Y%m%d).tar.gz *.cpp *.php *.h Makefile
