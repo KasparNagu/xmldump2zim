@@ -362,14 +362,18 @@ zim::Blob XmlDumpSource::getData(const std::string& aid){
 	if(aid.compare(0,4,"css/") == 0){
 		std::cout << "handlin css:"<<aid.substr(4)<<std::endl;
 		std::ifstream cssFile(aid.substr(4).c_str());
-		    // get length of file:
-		cssFile.seekg (0, cssFile.end);
-		size_t length = cssFile.tellg();
-		cssFile.seekg (0, cssFile.beg);
-		char * buffer = new char [length];
-		cssFile.read (buffer,length);
-		cssFile.close();
-		return zim::Blob(buffer,length);
+		if(cssFile){		
+   		    	// get length of file:
+			cssFile.seekg (0, cssFile.end);
+			size_t length = cssFile.tellg();
+			cssFile.seekg (0, cssFile.beg);
+			char * buffer = new char [length];
+			cssFile.read (buffer,length);
+			cssFile.close();
+			return zim::Blob(buffer,length);
+		}else{
+			std::cout<<"Couldn't load css file" <<std::endl;
+		}
 	}
 
 	std::string *text = getArticleText(aid);

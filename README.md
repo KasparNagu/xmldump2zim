@@ -11,6 +11,7 @@ There are two attempts of parser:
 The MWPhpParser uses the mediawiki php code to do the HTML conversion, to use this you need:
 -php with --php-embedd, I'm using php-5.5.1
 -mediawiki with the math extension (including texvc), I'm using mediawiki-1.21.1
+-A css file, just grab it by calling Makefile all.css
 
 The KiwiParser uses the Kiwi parser to do the HTML conversion, see https://github.com/aboutus/kiwi.
 This is not really working at the moment; it hangs for some pages.
