@@ -56,6 +56,15 @@ $wgLockManagers[] = array(
         'class'         => 'NullLockManager',
 );
 
+function print_stack_trace(){
+   $trace = array_reverse(debug_backtrace());
+    array_pop($trace);
+    echo "\n\n";
+    foreach($trace as $item)
+            echo '  ' . (isset($item['file']) ? $item['file'] : '<unknown file>') . ' ' . (isset($item['line']) ? $item['line'] : '<unknown line>') . ' calling ' . $item['function'] . '()' . "\n";
+ 
+}
+
 
 class DatabaseFake extends DatabaseBase {
 	function debugOut($str){
@@ -334,12 +343,26 @@ class DatabaseFake extends DatabaseBase {
 		}else if(preg_match('/SELECT\s*page_id,page_len,page_is_redirect,page_latest,page_content_model\s*FROM "page"\s*WHERE\s*\(?page_namespace = \'([^\']*)\' AND page_title = \'((?:[^\']|\\\')*)\'\s*\)?(?:\s*LIMIT 1)?/',$sql,$matches)){
 			#we serve a fake id, so every page is defined
 			$result = array(array('page_id'=>$this->i++, 'page_len'=>10, 'page_is_redirect'=>False, 'page_latest'=>True, 'page_content_model'=>False));
+		}else if(preg_match('/SELECT\s*page_id,page_namespace,page_title,page_is_redirect,page_len,page_latest\s*FROM "page"\s*WHERE \(page_namespace = \'0\' AND page_title IN \((.*)\)\s*\)/',$sql,$matches)){
+#			echo "Get multiple titles: $matches[1]\n";
+			$result = array();
+			foreach(explode(",",$matches[1]) as $m){
+				$m = trim($m,"' ");
+				$result[] = array(
+					'page_id'=>$this->i++,
+					'page_namespace'=>"0",
+					'page_title'=>$m,
+					'page_is_redirect'=>False,
+					'page_len'=>10,
+					'page_latest'=>True);
+			}
 		}else if(strpos($sql,"math")!==False){
 			//todo
 		}else if(strpos($sql,"iw_prefix")!==False){
 			//if you like proper inter wiki links, this is todo!
 		}else if(strpos($sql,"l10n_cache")===False){
 			echo "unhandled: $sql\n";
+#			print_stack_trace();
 		}
 		if($result !== False){
 			return new FakeResultWrapper2($result);
@@ -349,11 +372,13 @@ class DatabaseFake extends DatabaseBase {
 	}
 }
 
+class MyClass {}
+
 class FakeResultWrapper2 extends FakeResultWrapper {
 	function numRows() {
 		$ret=parent::numRows();
-//		print_stack_trace();
 #		echo "FakeResultWrapper2::numRows($ret)\n";
+#		print_stack_trace();
 		return $ret;
 	}
 	function fetchRow() {
@@ -362,10 +387,19 @@ class FakeResultWrapper2 extends FakeResultWrapper {
 		return parent::fetchRow();
 	}
 	function fetchObject() {
+		$obj = parent::fetchObject();
 #		echo "FakeResultWrapper2::fetchObject()\n";
-//		print_stack_trace();
-		return parent::fetchObject();
+#		print_r($obj);
+		return $obj;
 	}
+
+	function next() {
+		#this fixes a problem in the original FakeResultWrapper returning arrays instead of objects
+		$this->currentRow = parent::next();
+#		echo "FakeResultWrapper2::next()\n";
+		return $this->currentRow;
+	}
+
 }
 
 
@@ -402,7 +436,8 @@ function generateHtml($text,$title){
                 	'<link rel="stylesheet" href="/-/all.css" type="text/css" media="screen" />'.
                         "</head>\n" .
                         "<body>\n" .
-			'<div id="mw-content-text" lang="de" dir="ltr" class="mw-content-ltr">'. //TODO dependency? de?			
+			'<div id="mw-content-text" lang="de" dir="ltr" class="mw-content-ltr">'. //TODO dependency? de?	
+			//we remove the strange <b/> tags, where do they come from? what's they're purpose?	
                         preg_replace_callback('/src="([^"]*)"/','replaceImagesWithBase64Data',str_replace("<b/>","",$ret->getText())) .
 			'</div>'.
                         "</body>\n" .
