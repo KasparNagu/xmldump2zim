@@ -25,7 +25,7 @@ $wgPreprocessorCacheThreshold=False;
 $wgUploadPath = $wgUploadDirectory = "images";
 $wgArticlePath="/A/$1"; #/A/ will be the namespaced used in the zim file
 $wgDBtype = 'fake';
-
+$wgUseTidy = True; //so mixed pipe/html syntax mixed tables show nicely
 require_once( "$IP/includes/Setup.php");
 
 //$wgLang = $wgContLang = Language::factory( "en" );
@@ -327,7 +327,8 @@ class DatabaseFake extends DatabaseBase {
 		}else if(preg_match('/SELECT\s*old_text,old_flags\s*FROM "text"\s*WHERE old_id = \'([^\']*)\'\s*LIMIT 1/',$sql,$matches)){
 			$title = $this->templateIdToName[$matches[1]];
 #			echo "get text for $title ($matches[1])\n";
-			$result = array(array("old_text"=>getArticleText("Vorlage:".$title),"old_flags"=>"utf-8"));
+			$template = getArticleText("Vorlage:".$title);
+			$result = array(array("old_text"=>$template,"old_flags"=>"utf-8"));
 		}else if(preg_match('/SELECT\s*page_id\s*FROM "page"\s*WHERE page_namespace = \'6\' AND page_title =\'((?:[^\']|\\\')*)\'\s+LIMIT 1/',$sql,$matches)){
 			echo "get image $matches[1]\n";
 		}else if(preg_match('/SELECT\s*page_id,page_len,page_is_redirect,page_latest,page_content_model\s*FROM "page"\s*WHERE\s*\(?page_namespace = \'([^\']*)\' AND page_title = \'((?:[^\']|\\\')*)\'\s*\)?(?:\s*LIMIT 1)?/',$sql,$matches)){
@@ -335,6 +336,8 @@ class DatabaseFake extends DatabaseBase {
 			$result = array(array('page_id'=>$this->i++, 'page_len'=>10, 'page_is_redirect'=>False, 'page_latest'=>True, 'page_content_model'=>False));
 		}else if(strpos($sql,"math")!==False){
 			//todo
+		}else if(strpos($sql,"iw_prefix")!==False){
+			//if you like proper inter wiki links, this is todo!
 		}else if(strpos($sql,"l10n_cache")===False){
 			echo "unhandled: $sql\n";
 		}
