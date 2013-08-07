@@ -25,7 +25,7 @@ $wgPreprocessorCacheThreshold=False;
 $wgUploadPath = $wgUploadDirectory = "images";
 $wgArticlePath="/A/$1"; #/A/ will be the namespaced used in the zim file
 $wgDBtype = 'fake';
-$wgUseTidy = True; //so mixed pipe/html syntax mixed tables show nicely
+$wgUseTidy = True; //so pipe/html syntax mixed tables show nicely
 require_once( "$IP/includes/Setup.php");
 
 //$wgLang = $wgContLang = Language::factory( "en" );
@@ -402,7 +402,9 @@ function generateHtml($text,$title){
                 	'<link rel="stylesheet" href="/-/all.css" type="text/css" media="screen" />'.
                         "</head>\n" .
                         "<body>\n" .
-                        preg_replace_callback('/src="([^"]*)"/','replaceImagesWithBase64Data',$ret->getText()) .
+			'<div id="mw-content-text" lang="de" dir="ltr" class="mw-content-ltr">'. //TODO dependency? de?			
+                        preg_replace_callback('/src="([^"]*)"/','replaceImagesWithBase64Data',str_replace("<b/>","",$ret->getText())) .
+			'</div>'.
                         "</body>\n" .
                         "</html>";
 #	echo $ret;
