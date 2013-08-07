@@ -23,7 +23,9 @@ xmldump2zim: xmldump2zim.cpp MWPhpParser.o
 	${CXX}  -g ${CXXFLAGS} -o $@ $+ ${LDFLAGS} ${PHP_LDFLAGS}
 
 all.css:
-	wget -O all.css 'https://bits.wikimedia.org/de.wikipedia.org/load.php?debug=false&lang=de&modules=site%7Cext.flaggedRevs.basic%7Cext.gadget.CommonsDirekt%2CWikiMiniAtlas%7Cext.rtlcite%2Cwikihiero%7Cext.uls.nojs%7Cmediawiki.legacy.commonPrint%2Cshared%7Cmw.PopUpMediaTransform%7Cskins.vector&only=styles&skin=vector&*'
-
+	wget -O $@ 'https://bits.wikimedia.org/de.wikipedia.org/load.php?debug=false&lang=de&modules=site%7Cext.flaggedRevs.basic%7Cext.gadget.CommonsDirekt%2CWikiMiniAtlas%7Cext.rtlcite%2Cwikihiero%7Cext.uls.nojs%7Cmediawiki.legacy.commonPrint%2Cshared%7Cmw.PopUpMediaTransform%7Cskins.vector&only=styles&skin=vector&*'
+	echo '\n.editsection { display: none; }'  >> $@
+	#somewhere there seems to be a bug swallowing some trailing bytes (but where), so as workaround we just fill
+	yes "          " | dd conv=notrunc oflag=append of=$@ bs=1k count=1
 clean:
 	rm -f $(FILES)
