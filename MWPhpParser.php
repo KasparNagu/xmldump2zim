@@ -34,8 +34,12 @@ $wgHooks['GetLocalURL'][] = function(&$title,&$url,$query){
 	$url=str_replace("_"," ",$url);
 	return True;
 };
+$wgParserConf = array(
+        'class' => 'Parser',
+        'preprocessorClass' => 'Preprocessor_Hash',
+);
 
-$wgDebugLogFile = "mw-debug_log.txt";
+#$wgDebugLogFile = "mw-debug_log.txt";
 
 require_once( "$IP/includes/Setup.php");
 
@@ -374,6 +378,18 @@ class DatabaseFake extends DatabaseBase {
 					'page_is_redirect'=>False,
 					'page_len'=>10,
 					'page_latest'=>True));
+		}else if(preg_match('/SELECT\s*ss_row_id,ss_total_views,ss_total_edits,ss_good_articles,ss_total_pages,ss_users,ss_active_users,ss_images\s*FROM\s*"site_stats"\s*LIMIT 1/',$sql)){
+		#this is due to Scribunto which asks for the site stats
+			$result = array(array(
+				'ss_row_id'=>1,
+				'ss_total_views'=>0,
+				'ss_total_edits'=>0,
+				'ss_good_articles'=>0,
+				'ss_total_pages'=>0,
+				'ss_users'=>0,
+				'ss_active_users'=>0,
+				'ss_images'=>0
+			));
 		}else if(strpos($sql,"math")!==False){
 			//todo
 		}else if(strpos($sql,"iw_prefix")!==False){
@@ -422,8 +438,6 @@ class FakeResultWrapper2 extends FakeResultWrapper {
 
 
 
-$ourParser = new Parser();
-
 function replaceImagesWithBase64Data($matches){
 				//we embed the images
 				if(file_exists($matches[1])){
@@ -440,8 +454,8 @@ function replaceImagesWithBase64Data($matches){
 			}
 
 function generateHtml($text,$title){
-	global $ourParser;
-	$ret = $ourParser->parse($text,Title::newFromText( $title ),new ParserOptions());
+	global $wgParser;
+	$ret = $wgParser->parse($text,Title::newFromText( $title ),new ParserOptions());
 
 //			"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" " .
 //                       "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n" .
