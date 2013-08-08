@@ -10,7 +10,6 @@ char * MWPhpParser::php_argv[2] = {(char*)"MWPhpParser", NULL};
 
 
 void MWPhpParser::init(){
-	useCounter = 0;
 	php_embed_module.php_ini_path_override = (char*)"php.ini";
 	if (php_embed_init(1, php_argv PTSRMLS_CC) == FAILURE) {
 		fprintf(stderr,"php init failed\n");
@@ -103,14 +102,20 @@ void MWPhpParser::evalString(char *string){
 	} zend_catch {
 	} zend_end_try();
 }
+long MWPhpParser::getMemoryUsage(){
+	zval *args[0];
+	zval ret,funcname;
+	ZVAL_STRING(&funcname,"memory_get_usage",0);
+	call_user_function(EG(function_table),NULL,&funcname,&ret,0,args TSRMLS_CC);
+	return Z_LVAL(ret);
+}
 
 zim::Blob MWPhpParser::generateHtml(const std::string &text,const std::string &title){
-	if(useCounter>100){
+	long memUse = getMemoryUsage();
+//	std::cout << "Mem use: " << memUse << std::endl;	
+	if(memUse>50000000){
 		shutdown();
 		init();
-		useCounter = 0;
-	}else{
-		useCounter++;
 	}
 	zval *args[2];
 	zval ret,funcname,zstr,ztitle;
