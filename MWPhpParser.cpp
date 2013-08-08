@@ -64,34 +64,35 @@ ZEND_FUNCTION(getNamespaceName){
 		return;
 	}	
 }
+
+ZEND_BEGIN_ARG_INFO(arginfo_getArticleText, 0)
+    ZEND_ARG_INFO(0, title)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(arginfo_getNamespaceName, 0)
+    ZEND_ARG_INFO(0, id)
+ZEND_END_ARG_INFO()
+
+zend_function_entry additional_functions[] = {
+	ZEND_FE(getArticleText,arginfo_getArticleText)
+	ZEND_FE(getNamespaceName,arginfo_getNamespaceName)
+	ZEND_FE_END
+};
+
+zend_module_entry phpparser_module_entry = {
+	STANDARD_MODULE_HEADER,
+	(char*)"PhpParser", 
+	additional_functions, 
+	NULL, //startup
+	NULL, //shutdown
+	NULL, //request startup
+	NULL, //request shutdown
+	NULL, //info function, 
+	NO_VERSION_YET,
+	STANDARD_MODULE_PROPERTIES
+};
+
+
 void MWPhpParser::registerFunctions(){
-//	zend_function_entry *	additional_functions = (zend_function_entry*)malloc(sizeof(zend_function_entry)*3);
-	ZEND_BEGIN_ARG_INFO(arginfo_getArticleText, 0)
-	    ZEND_ARG_INFO(0, title)
-	ZEND_END_ARG_INFO()
-	ZEND_BEGIN_ARG_INFO(arginfo_getNamespaceName, 0)
-	    ZEND_ARG_INFO(0, id)
-	ZEND_END_ARG_INFO()
-
-	zend_function_entry additional_functions[] = {
-		ZEND_FE(getArticleText,arginfo_getArticleText)
-		ZEND_FE(getNamespaceName,arginfo_getNamespaceName)
-		ZEND_FE_END
-	};
-
-
-	zend_module_entry phpparser_module_entry = {
-		STANDARD_MODULE_HEADER,
-		(char*)"PhpParser", 
-		additional_functions, 
-		NULL, //startup
-		NULL, //shutdown
-		NULL, //request startup
-		NULL, //request shutdown
-		NULL, //info function, 
-		NO_VERSION_YET,
-		STANDARD_MODULE_PROPERTIES
-	};
 	zend_module_entry *entries[] = {&phpparser_module_entry};
 	php_register_extensions(entries, 1);
 }
