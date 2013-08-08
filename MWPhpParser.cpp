@@ -44,25 +44,41 @@ ZEND_FUNCTION(getArticleText){
 		RETURN_FALSE;
 	}else{
 		RETVAL_STRINGL(str->data(), str->size(), 1);
-		delete str;
+		delete str; //we have to delete
+		return;
+	}	
+}
+
+ZEND_FUNCTION(getNamespaceName){
+        long ns_id;
+
+        if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &ns_id) == FAILURE) {
+                return;
+        }
+	std::string *str = MWPhpParser_global_articleSupplyer->getNamespace(ns_id);
+	if(str==NULL){
+		RETURN_FALSE;
+	}else{
+		RETVAL_STRINGL(str->data(), str->size(), 1);
+		//we mustn't delete
 		return;
 	}	
 }
 void MWPhpParser::registerFunctions(){
-	zend_function_entry *	additional_functions = (zend_function_entry*)malloc(sizeof(zend_function_entry)*2);
+//	zend_function_entry *	additional_functions = (zend_function_entry*)malloc(sizeof(zend_function_entry)*3);
 	ZEND_BEGIN_ARG_INFO(arginfo_getArticleText, 0)
 	    ZEND_ARG_INFO(0, title)
 	ZEND_END_ARG_INFO()
+	ZEND_BEGIN_ARG_INFO(arginfo_getNamespaceName, 0)
+	    ZEND_ARG_INFO(0, id)
+	ZEND_END_ARG_INFO()
 
-	additional_functions[0].fname = "getArticleText";
-	additional_functions[0].handler = ZEND_FN(getArticleText);
-	additional_functions[0].arg_info = arginfo_getArticleText;
-	additional_functions[0].num_args = 1;
-	additional_functions[0].flags = 0;
+	zend_function_entry additional_functions[] = {
+		ZEND_FE(getArticleText,arginfo_getArticleText)
+		ZEND_FE(getNamespaceName,arginfo_getNamespaceName)
+		ZEND_FE_END
+	};
 
-	additional_functions[1].fname = NULL;
-	additional_functions[1].handler = NULL;
-	additional_functions[1].arg_info = NULL;
 
 	zend_module_entry phpparser_module_entry = {
 		STANDARD_MODULE_HEADER,

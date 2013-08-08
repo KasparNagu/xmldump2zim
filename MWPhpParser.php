@@ -14,6 +14,9 @@ require_once("$IP/includes/DefaultSettings.php");
 require_once( "$IP/extensions/ParserFunctions/ParserFunctions.php");
 require_once( "$IP/extensions/Cite/Cite.php");
 require_once( "$IP/extensions/Math/Math.php");
+require_once( "$IP/extensions/Scribunto/Scribunto.php");
+#require_once( "$IP/extensions/ImageMap/ImageMap.php");
+require_once( "$IP/extensions/Timeline/Timeline.php");
 
 require_once( "$IP/includes/normal/UtfNormalUtil.php" );
 
@@ -26,9 +29,15 @@ $wgUploadPath = $wgUploadDirectory = "images";
 $wgArticlePath="/A/$1"; #/A/ will be the namespaced used in the zim file
 $wgDBtype = 'fake';
 $wgUseTidy = True; //so pipe/html syntax mixed tables show nicely
-require_once( "$IP/includes/Setup.php");
+//we want spaces instead of underlines for the links, is this the best solution?
+$wgHooks['GetLocalURL'][] = function(&$title,&$url,$query){
+	$url=str_replace("_"," ",$url);
+	return True;
+};
 
-//$wgLang = $wgContLang = Language::factory( "en" );
+$wgDebugLogFile = "mw-debug_log.txt";
+
+require_once( "$IP/includes/Setup.php");
 
 
 $wgLocalFileRepo = array(
@@ -303,18 +312,18 @@ class DatabaseFake extends DatabaseBase {
 
 	}	
 	protected $i=1;
-	protected $templateIdCounter=1;
-	protected $templateIdToName = array();
+	protected $revIdCounter=1;
+	protected $revIdToName = array();
 	public function query( $sql, $fname = '', $tempIgnore = false ){
 		$this->debugOut("FakeDatabase::query($sql, $fname,$tempIgnore)");
 		$result = False;
-		if(preg_match('/SELECT\s*rev_id,rev_page,rev_text_id,rev_timestamp,rev_comment,rev_user_text,rev_user,rev_minor_edit,rev_deleted,rev_len,rev_parent_id,rev_sha1,rev_content_format,rev_content_model,page_namespace,page_title,page_id,page_latest,page_is_redirect,page_len,user_name  FROM "revision" INNER JOIN "page" ON \(\(page_id = rev_page\)\) LEFT JOIN "user" ON \(\(rev_user != 0\) AND \(user_id = rev_user\)\)\s*WHERE page_namespace = \'10\' AND page_title = \'((?:[^\']|\\\')*)\' AND \(rev_id=page_latest\)\s+LIMIT 1/',$sql,$matches)){
+		if(preg_match('/SELECT\s*rev_id,rev_page,rev_text_id,rev_timestamp,rev_comment,rev_user_text,rev_user,rev_minor_edit,rev_deleted,rev_len,rev_parent_id,rev_sha1,rev_content_format,rev_content_model,page_namespace,page_title,page_id,page_latest,page_is_redirect,page_len,user_name  FROM "revision" INNER JOIN "page" ON \(\(page_id = rev_page\)\) LEFT JOIN "user" ON \(\(rev_user != 0\) AND \(user_id = rev_user\)\)\s*WHERE page_namespace = \'((?:[^\']|\\\')*)\' AND page_title = \'((?:[^\']|\\\')*)\' AND \(rev_id=page_latest\)\s+LIMIT 1/',$sql,$matches)){
 #			echo "get template $matches[1]\n";
-			$this->templateIdToName[$this->templateIdCounter] = str_replace("_"," ",$matches[1]);
+			$this->revIdToName[$this->revIdCounter] = array("name"=>str_replace("_"," ",$matches[2]),"ns"=>$matches[1]);
 			$result=array(array(
-				"rev_id"=>$this->templateIdCounter,
-				"rev_page"=>$this->templateIdCounter,
-				"rev_text_id"=>$this->templateIdCounter++,
+				"rev_id"=>$this->revIdCounter,
+				"rev_page"=>$this->revIdCounter,
+				"rev_text_id"=>$this->revIdCounter++,
 				"rev_timestamp"=>False,
 				"rev_comment"=>"",
 				"rev_user_text"=>"",
@@ -334,10 +343,11 @@ class DatabaseFake extends DatabaseBase {
 				"page_len"=>False,
 				"user_name"=>""));
 		}else if(preg_match('/SELECT\s*old_text,old_flags\s*FROM "text"\s*WHERE old_id = \'([^\']*)\'\s*LIMIT 1/',$sql,$matches)){
-			$title = $this->templateIdToName[$matches[1]];
-#			echo "get text for $title ($matches[1])\n";
-			$template = getArticleText("Vorlage:".$title);
-			$result = array(array("old_text"=>$template,"old_flags"=>"utf-8"));
+			$title = $this->revIdToName[$matches[1]];
+			$fullTitle = getNamespaceName($title['ns']).":".$title['name'];
+			$text = getArticleText($fullTitle);
+#			echo "title=".$title['name']." ns=".$title['ns']." fullTitle=$fullTitle text=$text\n";
+			$result = array(array("old_text"=>$text,"old_flags"=>"utf-8"));
 		}else if(preg_match('/SELECT\s*page_id\s*FROM "page"\s*WHERE page_namespace = \'6\' AND page_title =\'((?:[^\']|\\\')*)\'\s+LIMIT 1/',$sql,$matches)){
 			echo "get image $matches[1]\n";
 		}else if(preg_match('/SELECT\s*page_id,page_len,page_is_redirect,page_latest,page_content_model\s*FROM "page"\s*WHERE\s*\(?page_namespace = \'([^\']*)\' AND page_title = \'((?:[^\']|\\\')*)\'\s*\)?(?:\s*LIMIT 1)?/',$sql,$matches)){
@@ -356,6 +366,14 @@ class DatabaseFake extends DatabaseBase {
 					'page_len'=>10,
 					'page_latest'=>True);
 			}
+		}else if(preg_match('/SELECT\s*page_id,page_namespace,page_title,page_is_redirect,page_len,page_latest\s*FROM\s*"page"\s*WHERE \(page_namespace = \'0\' AND page_title = \'((?:[^\']|\\\')*)\'\s*\)/',$sql,$matches)){
+			$result = array(array(
+					'page_id'=>$this->i++,
+					'page_namespace'=>"0",
+					'page_title'=>$matches[1],
+					'page_is_redirect'=>False,
+					'page_len'=>10,
+					'page_latest'=>True));
 		}else if(strpos($sql,"math")!==False){
 			//todo
 		}else if(strpos($sql,"iw_prefix")!==False){
