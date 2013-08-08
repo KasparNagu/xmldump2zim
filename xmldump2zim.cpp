@@ -16,7 +16,10 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  *
  */
-
+#define LOG_TIMING
+#ifdef LOG_TIMING
+#	include <time.h>
+#endif
 #include <iostream>
 #include <zim/writer/articlesource.h>
 #include <zim/writer/zimcreator.h>
@@ -124,6 +127,10 @@ class XmlDumpSource : public zim::writer::ArticleSource, public ArticleSupplier 
 		long nMaxArtices;
 		const zim::writer::Article* getNextCss();
 		std::stack<std::string> cssStack;
+#ifdef LOG_TIMING
+		std::ofstream *timingLog;
+#endif
+		std::istream *articleSelection;
 	public:
 	    virtual const zim::writer::Article* getNextArticle();
 	    virtual zim::Blob getData(const std::string& aid);
@@ -159,13 +166,21 @@ class XmlDumpSource : public zim::writer::ArticleSource, public ArticleSupplier 
 		}
 
 		cssStack.push("all.css");
+#ifdef LOG_TIMING
+		timingLog = new std::ofstream("timing.log");
+#endif
+		articleSelection = NULL;
 	    };
 	   virtual std::string *getArticleText(const std::string &aid);
-
+	   virtual std::string *getNamespace(const long id);
 	virtual ~XmlDumpSource(){
 		fclose(f);
 		munmap(file,fileSize);
 		wikiParser->shutdown();
+#ifdef LOG_TIMING
+		timingLog->close();
+		delete timingLog;
+#endif
 
 	}
 
@@ -174,46 +189,11 @@ class XmlDumpSource : public zim::writer::ArticleSource, public ArticleSupplier 
 	}
 
 	
-
+	void setArticleSelection(std::istream *in){
+		articleSelection = in;
+	}
 	
 };
-
-
-
-
-int main(int argc, char* argv[]){
-    if(argc < 3){
-	printf("usage: %s xmlFile [zimFile|index]\n", argv[0]);
-	exit(1);
-    }
-    char *xmlFile = argv[1];
-    XmlDumpSource *source = new XmlDumpSource(xmlFile);
-    if(argc > 3){
-	source->setMaxArticles(strtol(argv[3],NULL,10));
-    }
-
-    if(strcmp(argv[2],"index")==0){
-    	while(source->getNextPage()!=NULL);
-	source->saveIndex("index");
-	exit(0);
-    }
-    source->loadIndex("index");
-
-    char *zimFile = argv[2];
-    std::ifstream file(zimFile);
-    if(file){
-	std::cout << zimFile << " already exists" << std::endl;
-	exit(1);
-    }
-    zim::writer::ZimCreator creator(argc, argv);
-    std::string fname = std::string(zimFile);
-    creator.create(fname, *source);
-    delete source;
-}
-
-
-
-
 
 int XmlDumpSource::parse_siteinfo() {
 	char *siteinfoStart = strstr(file,"<siteinfo>");
@@ -293,16 +273,31 @@ const zim::writer::Article* XmlDumpSource::getNextPage() {
 	XmlDumpArticle *a = new XmlDumpArticle();
 	a->ns = 'A';
 	a->mimeType="text/html";
-	if( (curPageStart = strstr(curPageStart,"<page>")) == NULL){
-		return NULL;
-	}
-	char *curPageEnd = strstr(curPageStart,"</page>");
-	if(curPageEnd == NULL){
-		fprintf(stderr,"page end not found!\n");
-		return NULL;
+	off_t curPageLen;
+	char *curPageEnd;
+	if(articleSelection != NULL){
+		long start,end;
+		if(! ( (*articleSelection) >> start && (*articleSelection) >> end) ){
+			return NULL;
+		}
+		curPageStart = file + start;
+		curPageLen = end;
+		curPageEnd = curPageStart + curPageLen;
+		std::string title;
+		articleSelection->get();
+		std::getline(*articleSelection,title);
+	}else{
+		if( (curPageStart = strstr(curPageStart,"<page>")) == NULL){
+			return NULL;
+		}
+		curPageEnd = strstr(curPageStart,"</page>");
+		if(curPageEnd == NULL){
+			fprintf(stderr,"page end not found!\n");
+			return NULL;
+		}
+		curPageLen = curPageEnd-curPageStart+7;
 	}
 	xmlDocPtr doc;
-	off_t curPageLen = curPageEnd-curPageStart+7;
 	doc = xmlReadMemory(curPageStart, curPageLen, NULL, NULL, 0);
 	if (doc == NULL) {
 		fprintf(stderr, "Failed to parse document\n");
@@ -370,12 +365,15 @@ zim::Blob XmlDumpSource::getData(const std::string& aid){
 			char * buffer = new char [length];
 			cssFile.read (buffer,length);
 			cssFile.close();
+//			std::cout << "CSS: " <<std::string(buffer,length) << std::endl;
 			return zim::Blob(buffer,length);
 		}else{
 			std::cout<<"Couldn't load css file" <<std::endl;
 		}
 	}
-
+#ifdef LOG_TIMING
+	clock_t start = clock();
+#endif
 	std::string *text = getArticleText(aid);
 	if(text == NULL){
 		return zim::Blob(NULL,0);
@@ -383,6 +381,9 @@ zim::Blob XmlDumpSource::getData(const std::string& aid){
 		std::cout << "serving " << aid << std::endl;
 		zim::Blob b = wikiParser->generateHtml(*text,aid);
 		delete text;
+#ifdef LOG_TIMING
+		(*timingLog) << (clock()-start) << " " << aid << std::endl;
+#endif
 		return b;
 	}
 }
@@ -452,3 +453,49 @@ std::string* XmlDumpSource::getArticleText(const std::string &aid){
 	xmlFreeDoc(doc);
 	return text;
 }
+
+
+std::string *XmlDumpSource::getNamespace(const long id){
+	if(namespaces.count(id) == 0){
+		return NULL;
+	}
+	return &namespaces[id];
+}
+
+
+int main(int argc, char* argv[]){
+    if(argc < 3){
+	printf("usage: %s xmlFile [zimFile|index]\n", argv[0]);
+	exit(1);
+    }
+    char *xmlFile = argv[1];
+    XmlDumpSource *source = new XmlDumpSource(xmlFile);
+    if(argc > 3){
+	std::ifstream *articleSelectionFile = new std::ifstream(argv[3]);
+	if(*articleSelectionFile){
+		source->setArticleSelection(articleSelectionFile);
+	}else{
+		delete articleSelectionFile;
+		source->setMaxArticles(strtol(argv[3],NULL,10));
+	}
+    }
+
+    if(strcmp(argv[2],"index")==0){
+    	while(source->getNextPage()!=NULL);
+	source->saveIndex("index");
+	exit(0);
+    }
+    source->loadIndex("index");
+
+    char *zimFile = argv[2];
+    std::ifstream file(zimFile);
+    if(file){
+	std::cout << zimFile << " already exists" << std::endl;
+	exit(1);
+    }
+    zim::writer::ZimCreator creator(argc, argv);
+    std::string fname = std::string(zimFile);
+    creator.create(fname, *source);
+    delete source;
+}
+

@@ -24,7 +24,10 @@
 
 class ArticleSupplier {
 	public:
+		//caller is responsible of deleteing
 		virtual std::string *getArticleText(const std::string &title) = 0;
+		//caller must not delete
+		virtual std::string *getNamespace(const long id) = 0;
 };
 
 class WikiParser {
