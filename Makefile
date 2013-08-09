@@ -1,6 +1,6 @@
 KIWI=../kiwi
 PHPSRC=../php-5.5.1
-PHP_LDFLAGS=${PHPSRC}/sapi/embed/.libs/php_embed.o ${PHPSRC}/.libs/libphp5.so
+PHP_LDFLAGS=${PHPSRC}/.libs/libphp5.so
 PHP_CXXFLAGS=-I${PHPSRC} -I${PHPSRC}/sapi/embed -I${PHPSRC}/Zend -I${PHPSRC}/TSRM -I${PHPSRC}/main
 
 CXXFLAGS=-I../openzim/zimlib/include/ $(shell pkg-config --cflags libxml-2.0) 
